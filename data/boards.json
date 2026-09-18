@@ -1,0 +1,539 @@
+{
+  "verified_at": "2026-09-18",
+  "total_boards": 76,
+  "total_observed_postings": 9040,
+  "boards": [
+    {
+      "source": "greenhouse",
+      "token": "databricks",
+      "company": "Databricks",
+      "india_presence": false,
+      "observed_postings": 879
+    },
+    {
+      "source": "ashby",
+      "token": "openai",
+      "company": "OpenAI",
+      "india_presence": false,
+      "observed_postings": 816
+    },
+    {
+      "source": "greenhouse",
+      "token": "stripe",
+      "company": "Stripe",
+      "india_presence": false,
+      "observed_postings": 666
+    },
+    {
+      "source": "greenhouse",
+      "token": "datadog",
+      "company": "Datadog",
+      "india_presence": false,
+      "observed_postings": 449
+    },
+    {
+      "source": "greenhouse",
+      "token": "mongodb",
+      "company": "MongoDB",
+      "india_presence": false,
+      "observed_postings": 405
+    },
+    {
+      "source": "greenhouse",
+      "token": "cloudflare",
+      "company": "Cloudflare",
+      "india_presence": false,
+      "observed_postings": 373
+    },
+    {
+      "source": "greenhouse",
+      "token": "elastic",
+      "company": "Elastic",
+      "india_presence": false,
+      "observed_postings": 356
+    },
+    {
+      "source": "lever",
+      "token": "palantir",
+      "company": "Palantir",
+      "india_presence": false,
+      "observed_postings": 313
+    },
+    {
+      "source": "ashby",
+      "token": "harvey",
+      "company": "Harvey",
+      "india_presence": false,
+      "observed_postings": 299
+    },
+    {
+      "source": "greenhouse",
+      "token": "samsara",
+      "company": "Samsara",
+      "india_presence": false,
+      "observed_postings": 268
+    },
+    {
+      "source": "greenhouse",
+      "token": "coinbase",
+      "company": "Coinbase",
+      "india_presence": false,
+      "observed_postings": 218
+    },
+    {
+      "source": "greenhouse",
+      "token": "gitlab",
+      "company": "GitLab",
+      "india_presence": false,
+      "observed_postings": 215
+    },
+    {
+      "source": "ashby",
+      "token": "sierra",
+      "company": "Sierra",
+      "india_presence": false,
+      "observed_postings": 209
+    },
+    {
+      "source": "lever",
+      "token": "paytm",
+      "company": "Paytm",
+      "india_presence": true,
+      "observed_postings": 206
+    },
+    {
+      "source": "ashby",
+      "token": "clickhouse",
+      "company": "ClickHouse",
+      "india_presence": false,
+      "observed_postings": 200
+    },
+    {
+      "source": "greenhouse",
+      "token": "flexport",
+      "company": "Flexport",
+      "india_presence": false,
+      "observed_postings": 191
+    },
+    {
+      "source": "greenhouse",
+      "token": "fivetran",
+      "company": "Fivetran",
+      "india_presence": false,
+      "observed_postings": 189
+    },
+    {
+      "source": "greenhouse",
+      "token": "airbnb",
+      "company": "Airbnb",
+      "india_presence": false,
+      "observed_postings": 165
+    },
+    {
+      "source": "greenhouse",
+      "token": "reddit",
+      "company": "Reddit",
+      "india_presence": false,
+      "observed_postings": 154
+    },
+    {
+      "source": "greenhouse",
+      "token": "robinhood",
+      "company": "Robinhood",
+      "india_presence": false,
+      "observed_postings": 153
+    },
+    {
+      "source": "greenhouse",
+      "token": "figma",
+      "company": "Figma",
+      "india_presence": false,
+      "observed_postings": 152
+    },
+    {
+      "source": "greenhouse",
+      "token": "twilio",
+      "company": "Twilio",
+      "india_presence": false,
+      "observed_postings": 148
+    },
+    {
+      "source": "greenhouse",
+      "token": "rubrik",
+      "company": "Rubrik",
+      "india_presence": true,
+      "observed_postings": 142
+    },
+    {
+      "source": "ashby",
+      "token": "cursor",
+      "company": "Cursor",
+      "india_presence": false,
+      "observed_postings": 122
+    },
+    {
+      "source": "ashby",
+      "token": "perplexity",
+      "company": "Perplexity",
+      "india_presence": false,
+      "observed_postings": 114
+    },
+    {
+      "source": "greenhouse",
+      "token": "instacart",
+      "company": "Instacart",
+      "india_presence": false,
+      "observed_postings": 111
+    },
+    {
+      "source": "ashby",
+      "token": "langchain",
+      "company": "LangChain",
+      "india_presence": false,
+      "observed_postings": 107
+    },
+    {
+      "source": "greenhouse",
+      "token": "asana",
+      "company": "Asana",
+      "india_presence": false,
+      "observed_postings": 101
+    },
+    {
+      "source": "ashby",
+      "token": "baseten",
+      "company": "Baseten",
+      "india_presence": false,
+      "observed_postings": 99
+    },
+    {
+      "source": "ashby",
+      "token": "vanta",
+      "company": "Vanta",
+      "india_presence": false,
+      "observed_postings": 92
+    },
+    {
+      "source": "greenhouse",
+      "token": "vercel",
+      "company": "Vercel",
+      "india_presence": false,
+      "observed_postings": 84
+    },
+    {
+      "source": "greenhouse",
+      "token": "workato",
+      "company": "Workato",
+      "india_presence": false,
+      "observed_postings": 81
+    },
+    {
+      "source": "lever",
+      "token": "spotify",
+      "company": "Spotify",
+      "india_presence": false,
+      "observed_postings": 73
+    },
+    {
+      "source": "lever",
+      "token": "matchgroup",
+      "company": "Match Group",
+      "india_presence": false,
+      "observed_postings": 71
+    },
+    {
+      "source": "ashby",
+      "token": "sarvam",
+      "company": "Sarvam AI",
+      "india_presence": true,
+      "observed_postings": 63
+    },
+    {
+      "source": "ashby",
+      "token": "temporal",
+      "company": "Temporal",
+      "india_presence": false,
+      "observed_postings": 63
+    },
+    {
+      "source": "ashby",
+      "token": "supabase",
+      "company": "Supabase",
+      "india_presence": false,
+      "observed_postings": 60
+    },
+    {
+      "source": "lever",
+      "token": "meesho",
+      "company": "Meesho",
+      "india_presence": true,
+      "observed_postings": 49
+    },
+    {
+      "source": "greenhouse",
+      "token": "discord",
+      "company": "Discord",
+      "india_presence": false,
+      "observed_postings": 45
+    },
+    {
+      "source": "greenhouse",
+      "token": "glance",
+      "company": "Glance",
+      "india_presence": true,
+      "observed_postings": 43
+    },
+    {
+      "source": "greenhouse",
+      "token": "dropbox",
+      "company": "Dropbox",
+      "india_presence": false,
+      "observed_postings": 40
+    },
+    {
+      "source": "ashby",
+      "token": "render",
+      "company": "Render",
+      "india_presence": false,
+      "observed_postings": 40
+    },
+    {
+      "source": "ashby",
+      "token": "n8n",
+      "company": "n8n",
+      "india_presence": false,
+      "observed_postings": 36
+    },
+    {
+      "source": "ashby",
+      "token": "modal",
+      "company": "Modal",
+      "india_presence": false,
+      "observed_postings": 34
+    },
+    {
+      "source": "ashby",
+      "token": "linear",
+      "company": "Linear",
+      "india_presence": false,
+      "observed_postings": 32
+    },
+    {
+      "source": "greenhouse",
+      "token": "slice",
+      "company": "Slice",
+      "india_presence": true,
+      "observed_postings": 27
+    },
+    {
+      "source": "ashby",
+      "token": "workos",
+      "company": "WorkOS",
+      "india_presence": false,
+      "observed_postings": 27
+    },
+    {
+      "source": "lever",
+      "token": "porter",
+      "company": "Porter",
+      "india_presence": true,
+      "observed_postings": 25
+    },
+    {
+      "source": "greenhouse",
+      "token": "turing",
+      "company": "Turing",
+      "india_presence": true,
+      "observed_postings": 22
+    },
+    {
+      "source": "lever",
+      "token": "zeta",
+      "company": "Zeta",
+      "india_presence": true,
+      "observed_postings": 19
+    },
+    {
+      "source": "lever",
+      "token": "mindtickle",
+      "company": "MindTickle",
+      "india_presence": true,
+      "observed_postings": 19
+    },
+    {
+      "source": "lever",
+      "token": "fampay",
+      "company": "FamPay",
+      "india_presence": true,
+      "observed_postings": 14
+    },
+    {
+      "source": "greenhouse",
+      "token": "planetscale",
+      "company": "PlanetScale",
+      "india_presence": false,
+      "observed_postings": 13
+    },
+    {
+      "source": "ashby",
+      "token": "airbyte",
+      "company": "Airbyte",
+      "india_presence": false,
+      "observed_postings": 13
+    },
+    {
+      "source": "lever",
+      "token": "neon",
+      "company": "Neon",
+      "india_presence": false,
+      "observed_postings": 12
+    },
+    {
+      "source": "greenhouse",
+      "token": "make",
+      "company": "Make",
+      "india_presence": false,
+      "observed_postings": 12
+    },
+    {
+      "source": "lever",
+      "token": "cred",
+      "company": "CRED",
+      "india_presence": true,
+      "observed_postings": 11
+    },
+    {
+      "source": "ashby",
+      "token": "llamaindex",
+      "company": "LlamaIndex",
+      "india_presence": false,
+      "observed_postings": 11
+    },
+    {
+      "source": "ashby",
+      "token": "navi",
+      "company": "Navi",
+      "india_presence": true,
+      "observed_postings": 9
+    },
+    {
+      "source": "ashby",
+      "token": "resend",
+      "company": "Resend",
+      "india_presence": false,
+      "observed_postings": 9
+    },
+    {
+      "source": "greenhouse",
+      "token": "groww",
+      "company": "Groww",
+      "india_presence": true,
+      "observed_postings": 8
+    },
+    {
+      "source": "ashby",
+      "token": "atlan",
+      "company": "Atlan",
+      "india_presence": true,
+      "observed_postings": 8
+    },
+    {
+      "source": "ashby",
+      "token": "railway",
+      "company": "Railway",
+      "india_presence": false,
+      "observed_postings": 8
+    },
+    {
+      "source": "ashby",
+      "token": "prefect",
+      "company": "Prefect",
+      "india_presence": false,
+      "observed_postings": 8
+    },
+    {
+      "source": "ashby",
+      "token": "pinecone",
+      "company": "Pinecone",
+      "india_presence": false,
+      "observed_postings": 7
+    },
+    {
+      "source": "ashby",
+      "token": "zapier",
+      "company": "Zapier",
+      "india_presence": false,
+      "observed_postings": 7
+    },
+    {
+      "source": "greenhouse",
+      "token": "porter",
+      "company": "Porter",
+      "india_presence": true,
+      "observed_postings": 5
+    },
+    {
+      "source": "ashby",
+      "token": "neon",
+      "company": "Neon",
+      "india_presence": false,
+      "observed_postings": 5
+    },
+    {
+      "source": "greenhouse",
+      "token": "knock",
+      "company": "Knock",
+      "india_presence": false,
+      "observed_postings": 3
+    },
+    {
+      "source": "ashby",
+      "token": "knock",
+      "company": "Knock",
+      "india_presence": false,
+      "observed_postings": 3
+    },
+    {
+      "source": "ashby",
+      "token": "deepnote",
+      "company": "Deepnote",
+      "india_presence": false,
+      "observed_postings": 3
+    },
+    {
+      "source": "ashby",
+      "token": "weaviate",
+      "company": "Weaviate",
+      "india_presence": false,
+      "observed_postings": 2
+    },
+    {
+      "source": "lever",
+      "token": "fly",
+      "company": "Fly.io",
+      "india_presence": false,
+      "observed_postings": 1
+    },
+    {
+      "source": "greenhouse",
+      "token": "netlify",
+      "company": "Netlify",
+      "india_presence": false,
+      "observed_postings": 1
+    },
+    {
+      "source": "ashby",
+      "token": "clerk",
+      "company": "Clerk",
+      "india_presence": false,
+      "observed_postings": 1
+    },
+    {
+      "source": "ashby",
+      "token": "inngest",
+      "company": "Inngest",
+      "india_presence": false,
+      "observed_postings": 1
+    }
+  ]
+}
