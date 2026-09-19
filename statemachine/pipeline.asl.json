@@ -1,0 +1,79 @@
+{
+  "Comment": "Ingest -> extract -> gate -> score. Each stage is a separate task so a failure or a prompt change only replays the stage that needs it, rather than re-paying for the whole pipeline.",
+  "StartAt": "Ingest",
+  "States": {
+    "Ingest": {
+      "Type": "Task",
+      "Resource": "${IngestArn}",
+      "Comment": "Pull every configured board and Adzuna query into raw_postings.",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.TooManyRequestsException", "Lambda.ServiceException"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "Failed" }],
+      "Next": "Extract"
+    },
+    "Extract": {
+      "Type": "Task",
+      "Resource": "${ExtractArn}",
+      "Comment": "Bedrock reads each new posting. Skips anything already extracted, so a re-run only pays for new rows.",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "Failed" }],
+      "Next": "MoreToExtract"
+    },
+    "MoreToExtract": {
+      "Type": "Choice",
+      "Comment": "Extract returns has_more when it stops short of the Lambda timeout. Looping here keeps a large backlog moving without a longer function.",
+      "Choices": [{ "Variable": "$.has_more", "BooleanEquals": true, "Next": "Extract" }],
+      "Default": "Gate"
+    },
+    "Gate": {
+      "Type": "Task",
+      "Resource": "${GateArn}",
+      "Comment": "Pure code. This task's role holds no bedrock permission.",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "Failed" }],
+      "Next": "Score"
+    },
+    "Score": {
+      "Type": "Task",
+      "Resource": "${ScoreArn}",
+      "Comment": "Only gate survivors reach the stronger model.",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "Failed" }],
+      "Next": "MoreToScore"
+    },
+    "MoreToScore": {
+      "Type": "Choice",
+      "Choices": [{ "Variable": "$.has_more", "BooleanEquals": true, "Next": "Score" }],
+      "Default": "Done"
+    },
+    "Done": { "Type": "Succeed" },
+    "Failed": { "Type": "Fail", "Error": "PipelineFailed" }
+  }
+}

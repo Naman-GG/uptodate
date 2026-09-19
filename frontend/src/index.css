@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper:    #edefea;
+  --color-card:     #ffffff;
+  --color-ink:      #171a1c;
+  --color-muted:    #646b70;
+  --color-rule:     #d4d8d0;
+  --color-eligible: #17513f;
+  --color-score:    #b0760a;
+  --color-blocked:  #8e3b2c;
+  --color-faint:    #e3e6df;
+
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans:    "Instrument Sans", system-ui, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Digits that sit in columns must not shift width as values change. */
+.tnum { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+:focus-visible {
+  outline: 2px solid var(--color-eligible);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

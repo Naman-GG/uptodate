@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Eligibility triage for fresher job postings. Ingest structured job data,
+  read each description with Bedrock, then decide eligibility in plain code.
+
+Parameters:
+  AdzunaAppId:
+    Type: String
+    NoEcho: true
+    Description: Adzuna application id (free tier)
+  AdzunaAppKey:
+    Type: String
+    NoEcho: true
+    Description: Adzuna application key
+  ExtractModel:
+    Type: String
+    Default: anthropic.claude-haiku-4-5
+    Description: Cheap model - runs on every posting, so it sets the bill
+  ScoreModel:
+    Type: String
+    Default: anthropic.claude-sonnet-5
+    Description: Stronger model - runs only on postings that cleared the gate
+
+Globals:
+  Function:
+    Runtime: python3.13
+    MemorySize: 512
+    Timeout: 60
+    # x86_64, not arm64: without Docker, SAM's pip builder resolves x86_64
+    # manylinux wheels for the compiled dependencies (pydantic_core, jiter,
+    # cryptography, yaml). Declaring arm64 here would deploy those onto a
+    # Graviton runtime and every cold start would die on an invalid ELF header.
+    # Graviton is ~20% cheaper per ms; at this workload's scale that is cents.
+    Architectures: [x86_64]
+    Layers: [!Ref SharedLayer]
+    Environment:
+      Variables:
+        RAW_TABLE: !Ref RawPostingsTable
+        POSTINGS_TABLE: !Ref PostingsTable
+        PROFILES_TABLE: !Ref ProfilesTable
+        BEDROCK_REGION: !Ref AWS::Region
+        EXTRACT_MODEL: !Ref ExtractModel
+        SCORE_MODEL: !Ref ScoreModel
+        POWERTOOLS_LOG_LEVEL: INFO
+
+Resources:
+
+  # ---------------------------------------------------------------- storage --
+  # Write-once record of exactly what each source returned. Never mutated, so a
+  # bad extraction can always be replayed against the original payload.
+  RawPostingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: posting_id, AttributeType: S}
+      KeySchema:
+        - {AttributeName: posting_id, KeyType: HASH}
+      TimeToLiveSpecification: {AttributeName: expires_at, Enabled: true}
+
+  # The enriched record: extracted fields, gate verdict, fit score, board column.
+  PostingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: posting_id, AttributeType: S}
+        - {AttributeName: profile_id, AttributeType: S}
+        - {AttributeName: fit_score, AttributeType: N}
+        - {AttributeName: pipeline_stage, AttributeType: S}
+      KeySchema:
+        - {AttributeName: posting_id, KeyType: HASH}
+      GlobalSecondaryIndexes:
+        # Serves the board directly: one query returns a profile's postings
+        # already ordered by fit, so the read path never scans or sorts.
+        - IndexName: by-profile-fit
+          KeySchema:
+            - {AttributeName: profile_id, KeyType: HASH}
+            - {AttributeName: fit_score, KeyType: RANGE}
+          Projection: {ProjectionType: ALL}
+        # Lets each pipeline stage find its own backlog without a table scan --
+        # this is what makes extraction idempotent and therefore cheap to re-run.
+        - IndexName: by-stage
+          KeySchema:
+            - {AttributeName: pipeline_stage, KeyType: HASH}
+          Projection: {ProjectionType: ALL}
+
+  ProfilesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: profile_id, AttributeType: S}
+      KeySchema:
+        - {AttributeName: profile_id, KeyType: HASH}
+
+  SharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Metadata: {BuildMethod: python3.13}
+    Properties:
+      ContentUri: backend/
+      CompatibleRuntimes: [python3.13]
+      CompatibleArchitectures: [x86_64]
+      RetentionPolicy: Delete
+
+  # -------------------------------------------------------------- functions --
+  IngestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/ingest/
+      Handler: app.handler
+      Timeout: 900                   # 200+ boards, fetched politely
+      MemorySize: 1024
+      Environment:
+        Variables:
+          ADZUNA_APP_ID: !Ref AdzunaAppId
+          ADZUNA_APP_KEY: !Ref AdzunaAppKey
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RawPostingsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref PostingsTable}
+
+  ExtractFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/extract/
+      Handler: app.handler
+      Timeout: 900
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RawPostingsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref PostingsTable}
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+              Resource: "*"
+
+  # NOTE: this function is granted DynamoDB access and NOTHING else.
+  # It holds no bedrock:* permission, so it is structurally incapable of asking
+  # a model whether a candidate is eligible. The architectural claim of this
+  # project -- "the model reads, the code decides" -- is enforced by IAM here,
+  # not by convention in the source. Do not add Bedrock permissions to it.
+  GateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/gate/
+      Handler: app.handler
+      Timeout: 300
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref PostingsTable}
+        - DynamoDBReadPolicy: {TableName: !Ref ProfilesTable}
+
+  ScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/score/
+      Handler: app.handler
+      Timeout: 900
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref PostingsTable}
+        - DynamoDBReadPolicy: {TableName: !Ref ProfilesTable}
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+              Resource: "*"
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/api/
+      Handler: app.handler
+      Timeout: 60
+      Environment:
+        Variables:
+          ADZUNA_APP_ID: !Ref AdzunaAppId
+          ADZUNA_APP_KEY: !Ref AdzunaAppKey
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref PostingsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref ProfilesTable}
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel]
+              Resource: "*"
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+      CorsConfiguration:
+        AllowOrigins: ["*"]          # single-user demo; no cookies or auth headers
+        AllowHeaders: [content-type]
+        AllowMethods: [GET, POST, PATCH, DELETE, OPTIONS]
+
+  # ------------------------------------------------------------- scheduling --
+  DailyIngest:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: STANDARD
+      DefinitionUri: statemachine/pipeline.asl.json
+      DefinitionSubstitutions:
+        IngestArn: !GetAtt IngestFunction.Arn
+        ExtractArn: !GetAtt ExtractFunction.Arn
+        GateArn: !GetAtt GateFunction.Arn
+        ScoreArn: !GetAtt ScoreFunction.Arn
+      Policies:
+        - LambdaInvokePolicy: {FunctionName: !Ref IngestFunction}
+        - LambdaInvokePolicy: {FunctionName: !Ref ExtractFunction}
+        - LambdaInvokePolicy: {FunctionName: !Ref GateFunction}
+        - LambdaInvokePolicy: {FunctionName: !Ref ScoreFunction}
+      Events:
+        Daily:
+          Type: Schedule
+          Properties:
+            Schedule: "cron(30 1 * * ? *)"   # 07:00 IST
+            Description: Daily refresh of the posting pipeline
+
+Outputs:
+  ApiUrl:
+    Description: Base URL for the read/write API
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/v1"
+  PostingsTableName:
+    Value: !Ref PostingsTable
+  RawTableName:
+    Value: !Ref RawPostingsTable

@@ -14,3 +14,9 @@ build/
 *.log
 .fixtures/
 frontend/.vite/
+
+# copied in at build time by `make sync-data`
+backend/functions/ingest/boards.json
+
+# frontend build output
+frontend/dist/
