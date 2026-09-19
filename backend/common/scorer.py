@@ -23,11 +23,11 @@ from .profile import Profile
 
 log = logging.getLogger(__name__)
 
-# Strands talks to bedrock-runtime directly, so this is a Bedrock model id
-# (often an inference-profile id like "us.anthropic.…-v1:0"), NOT the
-# "anthropic.…" form the Mantle client takes in extractor.py. Kept separate and
-# env-driven precisely because the two surfaces name models differently.
-SCORE_MODEL_ID = os.environ.get("STRANDS_SCORE_MODEL", "us.anthropic.claude-sonnet-5-v1:0")
+# Strands talks to bedrock-runtime, the same surface extractor.py now uses, so
+# this is an inference-profile id. Nova Pro rather than a Marketplace-brokered
+# model: third-party models on Bedrock require a credit-card Marketplace
+# subscription that fails with INVALID_PAYMENT_INSTRUMENT on many accounts.
+SCORE_MODEL_ID = os.environ.get("SCORE_MODEL", "us.amazon.nova-pro-v1:0")
 AWS_REGION = os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1"))
 
 
@@ -105,7 +105,6 @@ def build_agent(profile: Profile, company_lookup) -> Agent:
             region_name=AWS_REGION,
             model_id=SCORE_MODEL_ID,
             max_tokens=2000,
-            cache_prompt="default",   # the system prompt is stable across the run
         ),
         tools=[get_candidate_profile, get_employer_context],
         system_prompt=SYSTEM_PROMPT,

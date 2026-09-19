@@ -15,11 +15,11 @@ Parameters:
     Description: Adzuna application key
   ExtractModel:
     Type: String
-    Default: anthropic.claude-haiku-4-5
-    Description: Cheap model - runs on every posting, so it sets the bill
+    Default: us.amazon.nova-2-lite-v1:0
+    Description: Cheap model - runs on every screened posting, so it sets the bill
   ScoreModel:
     Type: String
-    Default: anthropic.claude-sonnet-5
+    Default: us.amazon.nova-pro-v1:0
     Description: Stronger model - runs only on postings that cleared the gate
 
 Globals:
@@ -126,6 +126,14 @@ Resources:
       CodeUri: backend/functions/extract/
       Handler: app.handler
       Timeout: 900
+      # Extraction is network-bound, not compute-bound, but more memory also
+      # buys more CPU share on Lambda -- which matters when a dozen threads are
+      # serialising JSON and signing requests concurrently.
+      MemorySize: 2048
+      Environment:
+        Variables:
+          EXTRACT_CONCURRENCY: "6"
+          EXTRACT_BATCH: "600"
       Policies:
         - DynamoDBCrudPolicy: {TableName: !Ref RawPostingsTable}
         - DynamoDBCrudPolicy: {TableName: !Ref PostingsTable}

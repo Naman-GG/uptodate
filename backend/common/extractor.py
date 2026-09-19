@@ -5,8 +5,10 @@ object out -- a pure transform with no tools and no loop. Determinism is the
 whole point: a wrong `min_yoe` silently admits an ineligible posting.
 
 Three defences against drift, in order of strength:
-  1. `output_config.format` constrains generation to the schema server-side.
-  2. `validate_extraction` re-checks every field ourselves.
+  1. A forced tool call constrains generation to the schema server-side.
+  2. `validate_extraction` re-checks every field ourselves -- the model's
+     schema adherence is necessary but not sufficient, since an enum can be
+     satisfied by the wrong member.
   3. Anything still failing is quarantined, never written to the postings table.
 """
 from __future__ import annotations
@@ -16,14 +18,14 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from .bedrock import EXTRACT_MODEL, client
+from .converse import EXTRACT_MODEL, structured
 from .schema import EXTRACTION_SCHEMA, ValidationError, validate_extraction
 from .text import truncate_for_model
 
 log = logging.getLogger(__name__)
 
-# Kept byte-stable: it is the cached prefix for every call in the run, so any
-# per-posting text in here would cost us the cache hit on ~9,000 requests.
+# Kept byte-stable across the run: identical system text is what lets a model
+# with prompt caching reuse the prefix instead of re-reading it per posting.
 SYSTEM_PROMPT = """\
 You read job postings and extract eligibility facts. You never decide whether a \
 candidate should apply -- separate code makes that decision from the fields you return.
@@ -90,56 +92,40 @@ def build_user_message(posting: dict[str, Any]) -> str:
 
 def extract(posting: dict[str, Any], *, max_attempts: int = 2) -> ExtractionOutcome:
     """Extract eligibility facts, retrying once if validation rejects the result."""
-    messages: list[dict[str, Any]] = [
-        {"role": "user", "content": build_user_message(posting)}
-    ]
     last_error = "no attempt made"
-    usage_total = {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0}
+    usage_total = {"input_tokens": 0, "output_tokens": 0}
+
+    user_message = build_user_message(posting)
+    correction = ""
 
     for attempt in range(1, max_attempts + 1):
-        try:
-            response = client().messages.create(
-                model=EXTRACT_MODEL,
-                max_tokens=1500,
-                system=[
-                    {
-                        "type": "text",
-                        "text": SYSTEM_PROMPT,
-                        # Stable across the whole run -- turns ~9k repeats of this
-                        # prefix into cache reads instead of fresh input tokens.
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-                messages=messages,
-                output_config={
-                    "format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}
-                },
-            )
-        except Exception as exc:  # noqa: BLE001 - surface any API failure as a quarantine
-            last_error = f"bedrock call failed: {type(exc).__name__}: {exc}"
+        result = structured(
+            system=SYSTEM_PROMPT,
+            user=user_message + correction,
+            schema=EXTRACTION_SCHEMA,
+            model=EXTRACT_MODEL,
+            max_tokens=1500,
+        )
+
+        for key in ("input_tokens", "output_tokens"):
+            usage_total[key] += (result.usage or {}).get(key, 0)
+
+        if not result.ok:
+            last_error = result.error or "unknown converse failure"
             log.warning("extract attempt %s failed: %s", attempt, last_error)
             continue
 
-        for key in usage_total:
-            usage_total[key] += getattr(response.usage, key, 0) or 0
-
-        raw = next((b.text for b in response.content if b.type == "text"), "")
         try:
-            data = validate_extraction(json.loads(raw))
+            data = validate_extraction(result.data)
             return ExtractionOutcome(True, data, attempts=attempt, usage=usage_total)
-        except (json.JSONDecodeError, ValidationError) as exc:
+        except ValidationError as exc:
             last_error = f"{type(exc).__name__}: {exc}"
             log.warning("extract attempt %s rejected: %s", attempt, last_error)
-            # Show the model its own bad output plus the specific complaint.
-            messages = messages[:1] + [
-                {"role": "assistant", "content": raw or "(empty)"},
-                {
-                    "role": "user",
-                    "content": (
-                        f"That response was rejected: {last_error}\n"
-                        "Return a single JSON object matching the schema exactly."
-                    ),
-                },
-            ]
+            # Tell the model precisely what we rejected. A bare retry usually
+            # reproduces the same mistake.
+            correction = (
+                f"\n\nA previous attempt was rejected: {last_error}\n"
+                "Correct that field and record the result again."
+            )
 
     return ExtractionOutcome(False, None, last_error, max_attempts, usage_total)
