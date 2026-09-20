@@ -20,6 +20,9 @@ export default function App() {
 
   const [query, setQuery] = useState("");
   const [minScore, setMinScore] = useState(0);
+  // Instant, because role_type is already on every card from extraction. Changing
+  // the saved profile re-runs the pipeline; this just filters what is on screen.
+  const [roleType, setRoleType] = useState<"all" | "internship" | "new_grad_fte">("all");
   const [showProfile, setShowProfile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -36,6 +39,7 @@ export default function App() {
     const q = query.trim().toLowerCase();
     return (postings ?? []).filter((p) => {
       if (p.fit_score < minScore) return false;
+      if (roleType !== "all" && p.extraction?.role_type !== roleType) return false;
       if (!q) return true;
       return (
         p.title.toLowerCase().includes(q) ||
@@ -44,7 +48,7 @@ export default function App() {
         (p.why ?? "").toLowerCase().includes(q)
       );
     });
-  }, [postings, query, minScore]);
+  }, [postings, query, minScore, roleType]);
 
 
   function handleMove(id: string, column: Column) {
@@ -97,6 +101,23 @@ export default function App() {
             aria-label="Search postings"
             className="min-w-[13rem] flex-1 rounded border border-rule bg-card px-2.5 py-1.5"
           />
+
+          <div className="flex shrink-0 overflow-hidden rounded border border-rule" role="group" aria-label="Role type">
+            {([["all", "All"], ["internship", "Internships"], ["new_grad_fte", "Full-time"]] as const).map(
+              ([value, label], i) => (
+                <button
+                  key={value}
+                  onClick={() => setRoleType(value)}
+                  aria-pressed={roleType === value}
+                  className={`px-2.5 py-1.5 text-[0.82rem] ${i > 0 ? "border-l border-rule" : ""} ${
+                    roleType === value ? "bg-eligible text-white" : "hover:bg-faint"
+                  }`}
+                >
+                  {label}
+                </button>
+              ),
+            )}
+          </div>
 
           <label className="flex items-center gap-2 text-[0.86rem] whitespace-nowrap">
             Min fit
