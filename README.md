@@ -8,6 +8,12 @@
 
 Built for WeMakeDevs **First Commit**, Ship It track, solo.
 
+## Architecture
+
+![architecture](docs/architecture.png)
+
+*Editable source: [`docs/architecture.excalidraw`](docs/architecture.excalidraw) — open at [excalidraw.com](https://excalidraw.com), File → Open.*
+
 Job boards fail freshers in a specific way: search "ML intern, India", get a wall
 of results, and almost none are actually open to you. Filtering is keyword-based
 while **eligibility lives in unstructured prose**, the experience floor, the

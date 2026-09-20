@@ -169,3 +169,20 @@ assessing the gap.
 **Single profile.** the pipeline is parameterised by `profile_id` and the profile
 is stored server-side, so multi-user is a Cognito integration rather than a
 rewrite. researched it, ran out of time.
+
+## Tools and credits
+
+**AI coding tools.** Built with **Claude Code** (Anthropic) used as a pair
+programmer throughout: scaffolding, the AWS SAM template, adapter and Lambda
+code, the React frontend, and debugging. every architectural decision, the
+Converse migration, the prefilter design and the choice to cut the employer
+detection feature were made by me; the model wrote code against those decisions
+and found several of the bugs listed above.
+
+**Open source and public APIs.** Greenhouse, Lever and Ashby public job board
+APIs (keyless). Adzuna API (free tier, own credentials). AWS SAM CLI, boto3, the
+Strands Agents SDK, React, Vite, Tailwind CSS, pytest. all used under their own
+licences, all publicly documented.
+
+**Everything in this repository was written during the hackathon.** first commit
+18 September 2026, last on 20 September. no prior project was reused.
