@@ -1,4 +1,12 @@
-# Eligibility triage for fresher job postings
+# uptodate
+
+### a friendly and smart job board for freshers looking for tech jobs offcampus
+
+**Live:** https://uptodate.dfaqq1w4pxpfm.amplifyapp.com
+**Write-up:** [docs/WRITE_UP.md](docs/WRITE_UP.md) ([PDF](docs/WRITE_UP.pdf))
+**Also:** [full technical detail](docs/DETAILS.md) · [non-technical walkthrough](docs/HOW-IT-WORKS.md)
+
+Built for WeMakeDevs **First Commit**, Ship It track, solo.
 
 Job boards fail freshers in a specific way: search "ML intern, India", get a wall
 of results, and almost none are actually open to you. Filtering is keyword-based
@@ -22,15 +30,19 @@ rather than vibes.
 
 ## Why it is not a keyword filter
 
-Measured on the live corpus (9,040 postings, 76 boards, 2026-09-18):
+Measured on the live deployment, 201 boards, 20 September 2026:
 
-| Filter | Survivors |
+| Stage | Count |
 |---|---|
-| All postings | 9,040 |
-| Location mentions India | 794 |
-| …plus a technical-sounding title | 289 |
-| …plus an early-career title | 19 |
-| …of those 19, actually technical | ~5 |
+| Scanned | **14,547** |
+| Screened out in code (senior and non-technical titles) | 10,834 |
+| Read by Bedrock | **3,700** |
+| Quarantined (could not be read into the schema) | 13 |
+| **Eligible** | **154** |
+
+The rejection reasons are the argument: **1,296** postings were not technical
+roles at all, and **840** required US work authorisation. Both facts live only in
+the description.
 
 A keyword search for "intern in India" surfaces *Talent Acquisition Intern*,
 *Video Editor Intern* and *Copy Intern*. Reading the description is the only way
@@ -50,19 +62,32 @@ Structured public JSON APIs only, no HTML scraping, nothing ToS-hostile.
 | Greenhouse | `boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true` | none |
 | Lever | `api.lever.co/v0/postings/{token}?mode=json` | none |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{token}` | none |
+| Adzuna | `api.adzuna.com/v1/api/jobs/in/search/{page}` | free app id + key |
 
-76 boards verified live and recorded in `data/boards.json`.
-
-Anything those boards do not cover, LinkedIn, Naukri, Unstop, is handled by
-pasting a job description straight into the same pipeline.
+201 boards verified live and recorded in `data/boards.json`. Adzuna covers the
+Indian market the ATS boards do not reach; its descriptions are truncated at 500
+characters, which is surfaced on each card rather than hidden.
 
 ## Layout
 
 ```
 backend/
-  common/     schema, profile, gate, text and http helpers
-  adapters/   one module per source, all returning RawPosting
-  functions/  ingest · extract · gate · score · api
-data/         verified board registry
-frontend/     kanban UI
+  common/       schema, profile, gate, prefilter, converse, scorer, resume
+  adapters/     one module per source, all returning RawPosting
+  functions/    ingest · extract · gate · score · api
+statemachine/   Step Functions pipeline definition
+data/           verified board registry
+frontend/       React board: funnel, kanban, profile editor
+tests/          59 offline + 17 live (RUN_LIVE=1)
+docs/           write-up
+template.yaml   the whole stack
+```
+
+## Running it
+
+```bash
+make test                      # 59 offline tests
+make build                     # sam build
+sam deploy --guided            # first deploy
+RUN_LIVE=1 .venv/bin/python -m pytest tests/test_extraction_live.py
 ```

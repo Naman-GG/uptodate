@@ -1,4 +1,6 @@
-# uptodate: a friendly and smart job board for freshers looking for tech jobs offcampus
+# uptodate: full technical detail
+
+> The short submission write-up is [WRITE_UP.md](WRITE_UP.md). This is the long version.
 
 **Live:** https://uptodate.dfaqq1w4pxpfm.amplifyapp.com
 
