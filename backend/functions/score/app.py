@@ -43,11 +43,24 @@ def handler(event, context):
 
     def company_lookup(company: str) -> dict:
         titles = titles_by_company.get(company, [])
+        distinct = len({t.strip().lower() for t in titles})
+        total = len(titles)
+        # A real employer hiring several people writes several different
+        # postings. A listing farm repeats one title under many ids. Stating
+        # the conclusion beats handing the model two numbers and hoping.
+        repetition = (
+            "several openings share the same title, which is what listing farms do"
+            if total >= 3 and distinct <= max(1, total // 3)
+            else "openings have distinct titles, consistent with a real employer"
+            if total >= 3
+            else "too few openings in our index to judge"
+        )
         return {
             "company": company,
-            "open_roles_in_our_index": by_company.get(company, 0),
+            "open_roles_in_our_index": total,
+            "distinct_titles": distinct,
+            "repetition_signal": repetition,
             "sample_titles": titles[:8],
-            "distinct_titles": len(set(titles)),
         }
 
     agent = build_agent(profile, company_lookup)
