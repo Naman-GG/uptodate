@@ -19,11 +19,12 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
-  const [hideFlagged, setHideFlagged] = useState(false);
   const [minScore, setMinScore] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overColumn, setOverColumn] = useState<Column | null>(null);
 
   useEffect(() => {
     Promise.all([getPostings(), getFunnel(), getProfile()])
@@ -34,7 +35,6 @@ export default function App() {
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (postings ?? []).filter((p) => {
-      if (hideFlagged && p.credibility_concern) return false;
       if (p.fit_score < minScore) return false;
       if (!q) return true;
       return (
@@ -44,9 +44,8 @@ export default function App() {
         (p.why ?? "").toLowerCase().includes(q)
       );
     });
-  }, [postings, query, hideFlagged, minScore]);
+  }, [postings, query, minScore]);
 
-  const flaggedCount = (postings ?? []).filter((p) => p.credibility_concern).length;
 
   function handleMove(id: string, column: Column) {
     setPostings((prev) => prev?.map((p) => (p.posting_id === id ? { ...p, board_column: column } : p)) ?? prev);
@@ -110,14 +109,6 @@ export default function App() {
             <span className="tnum w-6">{minScore}</span>
           </label>
 
-          {flaggedCount > 0 && (
-            <label className="flex items-center gap-2 text-[0.86rem] whitespace-nowrap">
-              <input type="checkbox" checked={hideFlagged}
-                     onChange={(e) => setHideFlagged(e.target.checked)} className="accent-eligible" />
-              Hide {flaggedCount} flagged
-            </label>
-          )}
-
           <button
             onClick={() => setShowProfile((v) => !v)}
             aria-expanded={showProfile}
@@ -142,8 +133,27 @@ export default function App() {
             const cards = visible
               .filter((p) => p.board_column === col.key)
               .sort((a, b) => b.fit_score - a.fit_score);
+            const isTarget = overColumn === col.key && dragId !== null;
             return (
-              <section key={col.key} aria-labelledby={`col-${col.key}`}>
+              <section
+                key={col.key}
+                aria-labelledby={`col-${col.key}`}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOverColumn(col.key); }}
+                onDragLeave={(e) => {
+                  // Leaving for a child element still fires dragleave; ignore those.
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverColumn(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData("text/plain");
+                  setOverColumn(null);
+                  setDragId(null);
+                  if (id) handleMove(id, col.key);
+                }}
+                className={`rounded-lg p-1.5 transition-colors ${
+                  isTarget ? "bg-faint ring-1 ring-eligible/40" : ""
+                }`}
+              >
                 <div className="mb-2.5 flex items-baseline justify-between border-b border-rule pb-1.5">
                   <h2 id={`col-${col.key}`} className="font-display text-[1.05rem] font-medium">{col.heading}</h2>
                   <span className="tnum text-[0.82rem] text-muted">{cards.length}</span>
@@ -151,13 +161,25 @@ export default function App() {
                 {postings === null ? (
                   <ColumnSkeleton cards={col.key === "new" ? 3 : 1} />
                 ) : cards.length === 0 ? (
-                  <p className="text-[0.86rem] leading-snug text-muted">
-                    {query || minScore > 0 ? "Nothing matches those filters." : col.empty}
+                  <p className={`rounded border border-dashed px-3 py-6 text-center text-[0.86rem] leading-snug text-muted ${
+                    isTarget ? "border-eligible" : "border-faint"
+                  }`}>
+                    {isTarget ? "Drop to move it here"
+                      : query || minScore > 0 ? "Nothing matches those filters."
+                      : col.empty}
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2.5">
                     {cards.map((p) => (
-                      <PostingCard key={p.posting_id} posting={p} onMove={handleMove} onDrop={handleDrop} />
+                      <PostingCard
+                        key={p.posting_id}
+                        posting={p}
+                        onMove={handleMove}
+                        onDrop={handleDrop}
+                        onDragStart={setDragId}
+                        onDragEnd={() => { setDragId(null); setOverColumn(null); }}
+                        dragging={dragId === p.posting_id}
+                      />
                     ))}
                   </div>
                 )}

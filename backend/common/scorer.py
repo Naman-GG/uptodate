@@ -47,16 +47,10 @@ class FitAssessment(BaseModel):
     )
     gaps: list[str] = Field(default_factory=list, description="Up to 3 concrete things the posting wants that the candidate lacks.")
     strengths: list[str] = Field(default_factory=list, description="Up to 3 things the candidate has that this role wants.")
-    credibility_concern: str | None = Field(
-        default=None,
-        description=(
-            "EMPLOYER LEGITIMACY ONLY. Set when this is probably not a real vacancy "
-            "at a real employer -- training institute, certificate mill, staffing "
-            "advert with no end client, duplicate spam, job-board-slug company name. "
-            "Never for wrong city, contract length, missing skills or a thin "
-            "description. Null in almost every case."
-        ),
-    )
+    # There is no credibility field. Judging whether an employer is genuine was
+    # attempted with the model and with deterministic rules, and both produced
+    # confident nonsense -- see the note in functions/score/app.py. The scorer
+    # judges fit; a thin posting simply scores low and `why` says why.
 
 
 SYSTEM_PROMPT = """\
@@ -82,9 +76,15 @@ Never begin with "The candidate". Begin with the role.
   Good: "Recommendation ranking over GPU clusters -- far heavier infra than the
          candidate's ChromaDB and Neo4j work."
 
-Vary your sentences. If you find yourself reusing a phrase from a previous \
-posting, you are describing the candidate instead of the job. Two postings must \
-never be able to swap `why` lines.
+The second half must be as specific as the first. "Candidate has relevant AI and \
+ML experience" is not an assessment -- it is filler. Name the actual thing they \
+have done, or name what is missing:
+
+  Filler: "...; candidate has relevant AI and ML experience."
+  Real:   "...; candidate built Graph-RAG over Neo4j but has not worked at that scale."
+  Real:   "...; nothing in the profile touches embedded systems."
+
+Two postings must never be able to swap `why` lines.
 
 When the posting genuinely says almost nothing -- no team, no product, no stack \
 -- say exactly that: "Posting names no team, product or stack." That is useful \
@@ -101,24 +101,12 @@ A vague posting cannot score above 65 however appealing the title. If you cannot
 name what the job involves, you cannot claim it is a strong match. Most postings \
 should NOT land in the 70s.
 
-`credibility_concern` -- EMPLOYER LEGITIMACY ONLY
-Set it when this is probably not a genuine vacancy at a real employer:
-  - the employer sells training, courses, certificates or "placement" to students
-  - get_employer_context shows several openings with the SAME or near-identical
-    title -- a real employer hiring several people writes several different
-    postings; a listing farm repeats one
-  - the company name reads like a search query or job-board slug
-    ("IT Jobs Hyderabad", "vacancy global", "reputed company")
-  - an unpaid or paid-by-the-intern "internship" whose main offer is a certificate
-  - a staffing advert with no named end client
+DO NOT JUDGE THE EMPLOYER
+You are not asked whether the company is real. Separate code decides that from
+the shape of their postings, which is a fact rather than an impression. Judge
+fit only. If a posting is thin, that lowers the score and belongs in `why`.
 
-These are NOT credibility concerns -- never mention them here:
-  - the role is in another city or country
-  - contract length, duration, notice period, or a bond
-  - the posting wanting skills the candidate lacks
-  - a description truncated by the source
-
-Those belong in `gaps`, or they simply lower the score."""
+Write plain text. No HTML entities, no escaped quotes."""
 
 
 def build_agent(profile: Profile, company_lookup) -> Agent:

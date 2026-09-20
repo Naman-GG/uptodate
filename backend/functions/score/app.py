@@ -33,18 +33,34 @@ def handler(event, context):
 
     backlog = list(query_stage("gate_passed", limit=300))
 
-    # Employer context for the agent's legitimacy check, computed once from the
-    # batch rather than per-call: an employer whose only listings are
-    # near-identical "internships" is the pattern we want it to notice.
-    by_company = collections.Counter(p.get("company", "") for p in backlog)
+    # Employer context must come from the WHOLE corpus, not this batch.
+    # MAXGEN posts the same internship under nine ids spread across 14.5k rows;
+    # a batch of 154 sees one or two of them and concludes nothing is wrong.
+    # One projected scan is a few seconds and it is what makes the duplicate
+    # signal true rather than accidental.
+    by_company: collections.Counter = collections.Counter()
     titles_by_company: dict[str, list[str]] = collections.defaultdict(list)
-    for p in backlog:
-        titles_by_company[p.get("company", "")].append(p.get("title", ""))
+    scan_kwargs = {"ProjectionExpression": "company, title"}
+    while True:
+        page = table.scan(**scan_kwargs)
+        for row in page.get("Items", []):
+            company = (row.get("company") or "").strip()
+            if not company:
+                continue
+            by_company[company] += 1
+            if len(titles_by_company[company]) < 40:
+                titles_by_company[company].append(row.get("title", ""))
+        token = page.get("LastEvaluatedKey")
+        if not token:
+            break
+        scan_kwargs["ExclusiveStartKey"] = token
+    log.info("employer index built over %s companies", len(by_company))
 
     def company_lookup(company: str) -> dict:
+        """What else this employer has open, across the whole corpus."""
         titles = titles_by_company.get(company, [])
         distinct = len({t.strip().lower() for t in titles})
-        total = len(titles)
+        total = by_company.get(company, len(titles))
         # A real employer hiring several people writes several different
         # postings. A listing farm repeats one title under many ids. Stating
         # the conclusion beats handing the model two numbers and hoping.
@@ -80,8 +96,7 @@ def handler(event, context):
             failed += 1
             continue
 
-        if assessment.credibility_concern:
-            flagged += 1
+
 
         # to_ddb drops None values, so an attribute whose value is None must be
         # left out of the expression too -- referencing :c while the values map
@@ -100,13 +115,8 @@ def handler(event, context):
             ":t": utcnow(),
             ":col": "new",
         }
-        removes = []
-        if assessment.credibility_concern:
-            sets.append("credibility_concern = :c")
-            values[":c"] = assessment.credibility_concern
-        else:
-            # Clear any concern from a previous scoring pass.
-            removes.append("credibility_concern")
+        # Always clear: earlier passes wrote concerns we no longer stand behind.
+        removes = ["credibility_concern"]
 
         expression = "SET " + ", ".join(sets)
         if removes:
@@ -120,6 +130,29 @@ def handler(event, context):
         scored += 1
 
     return _result(profile_id, scored, failed, flagged, has_more=False)
+
+
+# Employer-legitimacy detection was attempted and removed. The record, because
+# the failures were instructive:
+#
+#   Asking the model      -- five prompt revisions. In turn: missed listing farms;
+#                            real companies called fake for having unfamiliar
+#                            names; and finally 89% of the board flagged with
+#                            reasons like "legitimate company, but the posting
+#                            lacks detail".
+#   Distinct-title ratio  -- flagged Databricks, OpenAI and Stripe, because a
+#                            capped title sample was compared against an uncapped
+#                            posting count.
+#   Repeated exact titles -- flagged Stripe's "Software Engineer, Intern" x5 and
+#                            Databricks' "Solutions Architect" x16. Large
+#                            employers repeat titles across locations; that is
+#                            ordinary hiring, not spam.
+#
+# The real pattern -- a training institute posting nine differently-titled
+# generic internships -- needs the descriptions compared against each other,
+# which is a corpus-level task this per-posting pipeline is the wrong shape for.
+# Shipping a flag that mislabels Stripe while missing the actual farm is worse
+# than shipping none: it teaches the reader to distrust every other signal.
 
 
 def _result(profile_id, scored, failed, flagged, has_more):

@@ -10,25 +10,20 @@
 
 export function FunnelSkeleton() {
   return (
-    <section className="border-b border-rule bg-card" aria-busy="true" aria-label="Loading screening funnel">
-      <div className="mx-auto max-w-[1180px] animate-pulse px-4 py-8 sm:px-6">
-        <div className="h-[3rem] w-[22rem] max-w-full rounded bg-faint" />
-        <div className="mt-3 h-4 w-[34rem] max-w-full rounded bg-faint" />
-        <div className="mt-7 space-y-4">
-          {[100, 26, 26, 2].map((w, i) => (
-            <div key={i} className="grid grid-cols-[4.8rem_1fr] items-center gap-x-3 sm:grid-cols-[5.5rem_1fr]">
-              <div className="ml-auto h-3 w-12 rounded bg-faint" />
-              <div className="flex items-center gap-2.5">
-                <div className="h-3.5 flex-1 rounded-sm bg-faint">
-                  <div className="h-full rounded-sm bg-rule" style={{ width: `${w}%` }} />
-                </div>
-                <div className="h-3 w-[4.5rem] rounded bg-faint" />
-              </div>
-            </div>
-          ))}
+    <header className="border-b border-rule bg-card" aria-busy="true" aria-label="Loading">
+      <div className="mx-auto max-w-[1180px] animate-pulse px-4 py-6 sm:px-6">
+        <div className="h-5 w-24 rounded bg-faint" />
+        <div className="mt-4 h-[2.6rem] w-[20rem] max-w-full rounded bg-faint" />
+        <div className="mt-2 h-4 w-[32rem] max-w-full rounded bg-faint" />
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex min-w-[15rem] flex-1 items-center gap-2">
+            <div className="h-2 flex-1 rounded-full bg-faint" />
+            <div className="h-2 w-2 rounded-full bg-faint" />
+          </div>
+          <div className="h-4 w-56 rounded bg-faint" />
         </div>
       </div>
-    </section>
+    </header>
   );
 }
 

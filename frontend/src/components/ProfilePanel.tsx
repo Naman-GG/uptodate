@@ -155,7 +155,7 @@ export default function ProfilePanel({
         </label>
 
         <label className="block">
-          <span className="text-[0.84rem] text-muted">Anything else worth knowing</span>
+          <span className="text-[0.84rem] text-muted">What you&rsquo;ve actually built</span>
           <textarea
             value={draft.about}
             onChange={(e) => set("about", e.target.value)}
@@ -163,6 +163,10 @@ export default function ProfilePanel({
             placeholder="Built a RAG pipeline on Bedrock; two internships; comfortable with distributed systems"
             className="mt-1 w-full resize-y rounded border border-rule bg-card px-2.5 py-1.5"
           />
+          <span className="mt-1 block text-[0.76rem] text-muted">
+            Projects, internships, the specific systems and tools. This is what makes a match
+            say &ldquo;you&rsquo;ve shipped retrieval but not evaluation&rdquo; instead of &ldquo;your skills align&rdquo;.
+          </span>
         </label>
 
         <label className="block">

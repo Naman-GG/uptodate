@@ -1,66 +1,78 @@
+import { useState } from "react";
 import type { Funnel } from "../types";
+import Wordmark from "./Wordmark";
 
 /**
- * The winnowing, drawn to scale.
+ * The winnowing, compressed.
  *
- * A job board shows you what survived; the work is in what didn't. Of 14,564
- * postings, all but a few dozen are ineligible for a fresher, and no keyword
- * search can tell you which.
- *
- * Bars are LINEAR, deliberately. A log scale would make the final row a
- * comfortable twelve percent of the width instead of the sliver it really is,
- * which would be a lie told for the sake of a tidier graphic. The sliver is
- * the product.
+ * An earlier version gave each stage its own labelled row and explanatory note.
+ * Accurate, but it put a pipeline diagram where a person came to look at jobs --
+ * four rows of internals before the first card. The collapse is still drawn to
+ * scale, because a sliver is the honest shape of 154 out of 14,547, but the
+ * machinery now sits behind a disclosure for anyone who wants it.
  */
 
 const fmt = new Intl.NumberFormat("en-IN");
 
 export default function FunnelBar({ funnel }: { funnel: Funnel }) {
-  const rows = [
-    { label: "scanned", count: funnel.total_ingested, note: "pulled from 201 job boards" },
-    { label: "screened", count: funnel.screened, note: "senior and non-technical titles dropped in code" },
-    { label: "read", count: funnel.read, note: "every description read by Bedrock" },
-    { label: "eligible", count: funnel.eligible, note: "cleared every hard rule", final: true },
-  ];
-  const max = Math.max(...rows.map((r) => r.count), 1);
-  const discarded = funnel.total_ingested - funnel.eligible;
+  const [open, setOpen] = useState(false);
+  const pct = (n: number) => `${Math.max((n / Math.max(funnel.total_ingested, 1)) * 100, 0.2)}%`;
 
   return (
-    <section className="border-b border-rule bg-card" aria-label="Screening funnel">
-      <div className="mx-auto max-w-[1180px] px-4 py-8 sm:px-6">
-        <h1 className="font-display text-[2.6rem] leading-[1.05] font-bold tracking-[-0.02em] sm:text-[3.3rem]">
+    <header className="border-b border-rule bg-card">
+      <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6">
+        <Wordmark className="text-[1.15rem]" />
+
+        <h1 className="mt-4 font-display text-[2.4rem] leading-[1.05] font-bold tracking-[-0.02em] sm:text-[2.9rem]">
           <span className="tnum text-eligible">{fmt.format(funnel.eligible)}</span> you can apply to
         </h1>
-        <p className="mt-2 max-w-[64ch] text-muted">
-          Out of <span className="tnum text-ink">{fmt.format(funnel.total_ingested)}</span> postings. The other{" "}
-          <span className="tnum text-ink">{fmt.format(discarded)}</span> wanted experience you don&rsquo;t have, a
-          graduation year that isn&rsquo;t yours, or the right to work somewhere you can&rsquo;t.
+        <p className="mt-1.5 max-w-[60ch] text-muted">
+          Out of <span className="tnum text-ink">{fmt.format(funnel.total_ingested)}</span> postings,
+          these are the ones open to someone at your stage, somewhere you&rsquo;re allowed to work,
+          asking for experience you already have.
         </p>
 
-        <ol className="mt-7 space-y-2.5">
-          {rows.map((r) => {
-            const pct = (r.count / max) * 100;
-            return (
-              <li key={r.label} className="grid grid-cols-[4.8rem_1fr] items-center gap-x-3 sm:grid-cols-[5.5rem_1fr]">
-                <span className="text-right text-[0.84rem] text-muted">{r.label}</span>
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <div className="h-3.5 flex-1 rounded-sm bg-faint">
-                    <div
-                      className={`h-full rounded-sm ${r.final ? "bg-eligible" : "bg-muted/40"}`}
-                      style={{ width: `${Math.max(pct, 0.18)}%` }}
-                    />
-                  </div>
-                  <span className={`tnum w-[4.5rem] shrink-0 text-right text-[0.95rem] ${r.final ? "text-eligible" : ""}`}>
-                    {fmt.format(r.count)}
-                  </span>
-                </div>
-                <span />
-                <span className="text-[0.78rem] leading-snug text-muted">{r.note}</span>
-              </li>
-            );
-          })}
-        </ol>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex min-w-[15rem] flex-1 items-center gap-2" aria-hidden="true">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-faint">
+              <div className="h-full rounded-full bg-muted/35" style={{ width: pct(funnel.read) }} />
+            </div>
+            <div className="h-2 w-2 shrink-0 rounded-full bg-eligible" />
+          </div>
+          <p className="text-[0.84rem] text-muted">
+            <span className="tnum text-ink">{fmt.format(funnel.total_ingested)}</span> scanned
+            <span className="mx-1.5">·</span>
+            <span className="tnum text-ink">{fmt.format(funnel.read)}</span> read by Bedrock
+            <span className="mx-1.5">·</span>
+            <span className="tnum text-eligible">{fmt.format(funnel.eligible)}</span> eligible
+          </p>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="text-[0.82rem] text-muted underline decoration-rule underline-offset-2 hover:text-ink"
+          >
+            {open ? "Hide how this was filtered" : "How this was filtered"}
+          </button>
+        </div>
+
+        {open && (
+          <dl className="mt-4 grid gap-x-8 gap-y-2 border-t border-faint pt-4 text-[0.84rem] sm:grid-cols-2">
+            {[
+              ["Scanned", funnel.total_ingested, "pulled from 201 company job boards and Adzuna"],
+              ["Screened", funnel.screened, "senior and clearly non-technical titles dropped in code, before any model ran"],
+              ["Read", funnel.read, "every remaining description read in full by a model on Amazon Bedrock"],
+              ["Eligible", funnel.eligible, "cleared every hard rule: role type, experience, location, work authorisation"],
+            ].map(([label, count, note]) => (
+              <div key={label as string} className="flex gap-3">
+                <dt className="tnum w-20 shrink-0 text-right text-ink">{fmt.format(count as number)}</dt>
+                <dd className="text-muted">
+                  <span className="text-ink">{label}</span> — {note}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
-    </section>
+    </header>
   );
 }

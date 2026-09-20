@@ -10,6 +10,9 @@
   --color-score:    #b0760a;
   --color-blocked:  #8e3b2c;
   --color-faint:    #e3e6df;
+  /* Silver reads as metal rather than grey: cool, slightly blue, with
+     enough contrast on paper to sit beside the green without muddying. */
+  --color-silver:   #9aa3a8;
 
   --font-display: "Bricolage Grotesque", system-ui, sans-serif;
   --font-sans:    "Instrument Sans", system-ui, sans-serif;

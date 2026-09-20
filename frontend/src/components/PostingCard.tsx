@@ -24,19 +24,34 @@ export default function PostingCard({
   posting,
   onMove,
   onDrop,
+  onDragStart,
+  onDragEnd,
+  dragging,
 }: {
   posting: Posting;
   onMove: (id: string, column: Column) => void;
   onDrop: (id: string) => void;
+  onDragStart?: (id: string) => void;
+  onDragEnd?: () => void;
+  dragging?: boolean;
 }) {
   const next = NEXT[posting.board_column];
-  const flagged = Boolean(posting.credibility_concern);
 
   return (
     <article
-      className={`rounded-lg border bg-card p-3.5 ${
-        flagged ? "border-blocked/40" : "border-rule"
-      }`}
+      // Dragging is an enhancement, not the only way to move a card: the
+      // buttons below stay, so the board is fully usable from a keyboard and
+      // on touch, where HTML5 drag events do not fire.
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", posting.posting_id);
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart?.(posting.posting_id);
+      }}
+      onDragEnd={() => onDragEnd?.()}
+      className={`cursor-grab rounded-lg border bg-card p-3.5 active:cursor-grabbing ${
+"border-rule"
+      } ${dragging ? "opacity-40" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -51,7 +66,7 @@ export default function PostingCard({
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <div className={`tnum text-[1.4rem] leading-none font-medium ${flagged ? "text-blocked" : "text-score"}`}>
+          <div className="tnum text-[1.4rem] leading-none font-medium text-score">
             {posting.fit_score}
           </div>
           <div className="text-[0.7rem] text-muted">fit</div>
@@ -59,12 +74,6 @@ export default function PostingCard({
       </div>
 
       <p className="mt-2.5 text-[0.88rem] leading-snug">{posting.why}</p>
-
-      {flagged && (
-        <p className="mt-2.5 border-l-2 border-blocked pl-2.5 text-[0.82rem] leading-snug text-blocked">
-          {posting.credibility_concern}
-        </p>
-      )}
 
       {posting.gaps.length > 0 && (
         <p className="mt-2 text-[0.82rem] leading-snug text-muted">
