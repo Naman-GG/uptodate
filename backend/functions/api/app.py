@@ -82,15 +82,29 @@ def handler(event, context):
 
 
 def _list_postings(profile_id: str, params: dict) -> dict:
-    limit = min(int(params.get("limit", 100)), 200)
-    resp = postings_table().query(
-        IndexName="by-profile-fit",
-        KeyConditionExpression=Key("profile_id").eq(profile_id),
-        ScanIndexForward=False,          # highest fit first
-        Limit=limit,
-    )
-    items = [from_ddb(i) for i in resp.get("Items", [])]
-    items = [i for i in items if i.get("pipeline_stage") == "scored"]
+    limit = min(int(params.get("limit", 100)), 500)
+
+    # A query returns at most 1 MB per page regardless of Limit. These rows carry
+    # the full extraction blob, so ~150 of them exceed that and the last few were
+    # silently dropped. Follow LastEvaluatedKey until we have enough.
+    table = postings_table()
+    items: list[dict] = []
+    kwargs = {
+        "IndexName": "by-profile-fit",
+        "KeyConditionExpression": Key("profile_id").eq(profile_id),
+        "ScanIndexForward": False,       # highest fit first
+    }
+    while len(items) < limit:
+        resp = table.query(**kwargs)
+        items += [
+            row for row in (from_ddb(i) for i in resp.get("Items", []))
+            if row.get("pipeline_stage") == "scored"
+        ]
+        token = resp.get("LastEvaluatedKey")
+        if not token:
+            break
+        kwargs["ExclusiveStartKey"] = token
+    items = items[:limit]
 
     column = params.get("column")
     if column:

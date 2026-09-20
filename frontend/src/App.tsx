@@ -109,6 +109,13 @@ export default function App() {
             <span className="tnum w-6">{minScore}</span>
           </label>
 
+          {postings && (visible.length !== postings.length) && (
+            <span className="text-[0.86rem] whitespace-nowrap text-muted">
+              showing <span className="tnum text-ink">{visible.length}</span> of{" "}
+              <span className="tnum">{postings.length}</span>
+            </span>
+          )}
+
           <button
             onClick={() => setShowProfile((v) => !v)}
             aria-expanded={showProfile}
