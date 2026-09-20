@@ -19,17 +19,17 @@ export default function FunnelBar({ funnel }: { funnel: Funnel }) {
   const rows = [
     { label: "scanned", count: funnel.total_ingested, note: "pulled from 201 job boards" },
     { label: "screened", count: funnel.screened, note: "senior and non-technical titles dropped in code" },
-    { label: "read", count: funnel.extracted, note: "every description read by Bedrock" },
-    { label: "eligible", count: funnel.gate_passed, note: "cleared every hard rule", final: true },
+    { label: "read", count: funnel.read, note: "every description read by Bedrock" },
+    { label: "eligible", count: funnel.eligible, note: "cleared every hard rule", final: true },
   ];
   const max = Math.max(...rows.map((r) => r.count), 1);
-  const discarded = funnel.total_ingested - funnel.gate_passed;
+  const discarded = funnel.total_ingested - funnel.eligible;
 
   return (
     <section className="border-b border-rule bg-card" aria-label="Screening funnel">
       <div className="mx-auto max-w-[1180px] px-4 py-8 sm:px-6">
         <h1 className="font-display text-[2.6rem] leading-[1.05] font-bold tracking-[-0.02em] sm:text-[3.3rem]">
-          <span className="tnum text-eligible">{fmt.format(funnel.gate_passed)}</span> you can apply to
+          <span className="tnum text-eligible">{fmt.format(funnel.eligible)}</span> you can apply to
         </h1>
         <p className="mt-2 max-w-[64ch] text-muted">
           Out of <span className="tnum text-ink">{fmt.format(funnel.total_ingested)}</span> postings. The other{" "}

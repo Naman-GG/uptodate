@@ -166,6 +166,10 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy: {TableName: !Ref PostingsTable}
         - DynamoDBReadPolicy: {TableName: !Ref ProfilesTable}
+        # The scorer needs the full job description, which lives only in the
+        # raw table -- the postings table holds metadata and extracted fields.
+        # Read-only: nothing downstream of ingest may mutate the raw payload.
+        - DynamoDBReadPolicy: {TableName: !Ref RawPostingsTable}
         - Statement:
             - Effect: Allow
               Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
@@ -203,7 +207,10 @@ Resources:
       CorsConfiguration:
         AllowOrigins: ["*"]          # single-user demo; no cookies or auth headers
         AllowHeaders: [content-type]
-        AllowMethods: [GET, POST, PATCH, DELETE, OPTIONS]
+        # PUT is required by the profile editor. A missing verb here fails the
+        # browser preflight with no access-control headers, which surfaces as a
+        # bare "TypeError: Failed to fetch" -- the request never leaves the page.
+        AllowMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
 
   # ------------------------------------------------------------- scheduling --
   DailyIngest:

@@ -7,6 +7,7 @@ Routes:
   GET    /profile           current criteria
   PUT    /profile           update criteria (the gate honours it next run)
   POST   /evaluate          run one pasted description through the pipeline
+  POST   /profile/suggest   propose profile fields from an uploaded resume
 """
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from common.extractor import extract
 from common.gate import evaluate
 from common.posting import utcnow
 from common.profile import DEFAULT_PROFILE, Profile
+from common.resume import ResumeError, suggest_profile
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
@@ -70,6 +72,8 @@ def handler(event, context):
             return _put_profile(profile_id, body)
         if path.endswith("/evaluate") and method == "POST":
             return _evaluate(profile_id, body)
+        if path.endswith("/profile/suggest") and method == "POST":
+            return _suggest_from_resume(body)
     except Exception as exc:  # noqa: BLE001
         log.exception("handler error")
         return _reply(500, {"error": f"{type(exc).__name__}: {exc}"})
@@ -151,8 +155,16 @@ def _funnel(profile_id: str) -> dict:
         counts[stage] = total
 
     counts["total_ingested"] = sum(counts[s] for s in stages)
-    # What the model actually read, for the funnel display.
+
+    # pipeline_stage is where a posting is NOW, not where it has been. A posting
+    # that reached `scored` stopped being counted as `extracted` the moment the
+    # gate moved it on -- so the raw stage counts report 0 read and 0 eligible
+    # once the pipeline drains. The funnel needs cumulative progress, so derive
+    # each step from every stage at or beyond it.
     counts["screened"] = counts["total_ingested"] - counts["prescreened_out"]
+    counts["read"] = counts["gate_passed"] + counts["gate_blocked"] + counts["scored"]
+    counts["eligible"] = counts["gate_passed"] + counts["scored"]
+    counts["awaiting_extraction"] = counts["new"] + counts["extracted"]
     return _reply(200, counts)
 
 
@@ -185,3 +197,20 @@ def _evaluate(profile_id: str, body: dict) -> dict:
 
     verdict = evaluate(outcome.data, _profile(profile_id))
     return _reply(200, {"extraction": outcome.data, "gate": verdict.to_item()})
+
+
+def _suggest_from_resume(body: dict) -> dict:
+    """Propose profile fields from a resume. Deliberately does not save.
+
+    The user reviews and edits before committing -- a resume describes what
+    someone has done, and the profile describes what they want next.
+    """
+    try:
+        proposed = suggest_profile(
+            content_b64=body.get("content_base64"),
+            filename=body.get("filename", "resume.pdf"),
+            text=body.get("text"),
+        )
+    except ResumeError as exc:
+        return _reply(400, {"error": str(exc)})
+    return _reply(200, {"proposed": proposed})

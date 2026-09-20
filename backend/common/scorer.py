@@ -34,46 +34,82 @@ AWS_REGION = os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-e
 class FitAssessment(BaseModel):
     """What the scorer must return. Enforced by Strands via structured output."""
 
-    fit_score: int = Field(ge=0, le=100, description="0-100. Be strict: 80+ means genuinely strong.")
-    why: str = Field(max_length=200, description="One sentence on why this matches, naming specifics from the posting.")
+    fit_score: int = Field(ge=0, le=100, description="0-100, using the full range. See the score bands.")
+    why: str = Field(
+        max_length=220,
+        description=(
+            "One sentence. Name something specific from THIS posting (team, product, "
+            "stack, problem) and connect it to something concrete in the candidate "
+            "profile. Must not be a sentence that would fit any other posting."
+        ),
+    )
     gaps: list[str] = Field(default_factory=list, description="Up to 3 concrete things the posting wants that the candidate lacks.")
     strengths: list[str] = Field(default_factory=list, description="Up to 3 things the candidate has that this role wants.")
     credibility_concern: str | None = Field(
         default=None,
         description=(
-            "Set when the posting looks like a training institute, an unpaid "
-            "'certificate' internship, a staffing agency advert or a duplicate "
-            "spam listing rather than a genuine employer vacancy. Null otherwise."
+            "EMPLOYER LEGITIMACY ONLY. Set when this is probably not a real vacancy "
+            "at a real employer -- training institute, certificate mill, staffing "
+            "advert with no end client, duplicate spam, job-board-slug company name. "
+            "Never for wrong city, contract length, missing skills or a thin "
+            "description. Null in almost every case."
         ),
     )
 
 
 SYSTEM_PROMPT = """\
-You assess how well a job posting fits a candidate. The posting has already \
-passed a hard eligibility gate, so do not re-litigate eligibility -- assume the \
-candidate may apply. Your job is judgement about *fit and quality*.
+You assess how well a job posting fits one specific candidate. The posting has \
+already cleared a hard eligibility gate, so do not re-litigate eligibility -- \
+assume the candidate may apply. Judge fit and quality.
 
-Use the tools available to you. Fetch the candidate profile before scoring, and \
-look up the employer when the posting's legitimacy is unclear.
+Always call get_candidate_profile first. Everything you say about the candidate \
+must come from that profile, never from assumption.
 
-Scoring discipline:
-- 80-100: strong match on both the work and the candidate's actual skills
-- 60-79: plausible, with real gaps
-- 40-59: weak but not absurd
-- below 40: technically eligible, poor fit
+WRITING THE `why`
+Name something specific from THIS posting -- the team, the product, the stack, \
+the problem. Then connect it to something concrete in the profile.
 
-Be strict. A list where everything scores 85 is useless to the person reading it.
+  Bad:  "The candidate's skills in Python and AWS align with the role."
+  Good: "Builds retrieval pipelines on Bedrock; candidate has shipped RAG with
+         PyTorch and deployed on AWS."
 
-Watch for low-quality listings. The Indian internship market contains training \
-institutes selling "internships" with certificates, staffing agencies posting \
-generic adverts, and the same listing reposted many times. Signals: the employer \
-describes itself as providing learning or career opportunities to students rather \
-than as a company with a product; the posting promises a certificate; the role \
-has no specific team or product. Flag these in credibility_concern -- the \
-candidate deserves to know before spending an application on it.
+If two postings could swap `why` lines without anyone noticing, both are too \
+vague. A sentence that would fit any posting is worthless to the reader.
 
-When a description is short or truncated, say so in your reasoning and score \
-conservatively rather than inventing detail that is not there."""
+SCORING
+Use the full range. A list where everything is 60-70 tells the reader nothing.
+
+  85-100  the work itself matches what the candidate has actually done, and the
+          posting names a stack they know
+  70-84   clearly the right kind of role; some named requirements are missing
+  50-69   right family, but the specifics diverge or the posting is too vague
+          to tell
+  30-49   technically eligible, weak overlap
+  0-29    barely related, or the posting carries almost no information
+
+Anchor on the WORK, not on keyword overlap. "Python" appearing in both is not a \
+match -- everything lists Python.
+
+`credibility_concern` IS ONLY FOR EMPLOYER LEGITIMACY
+Set it when the posting looks like it is not a genuine vacancy at a real \
+employer. Signals: the employer describes itself as providing training, courses \
+or certificates to students rather than as a company with a product; an \
+"internship" that charges, promises a certificate as the main benefit, or is \
+unpaid with no named team; a staffing agency advert with no end client; the \
+same listing repeated under many ids; a company name that is a job-board slug \
+("IT Jobs Hyderabad", "vacancy global") rather than a business.
+
+Do NOT use it for ordinary mismatches. These are NOT credibility concerns:
+  - the role is in another city or country
+  - the contract length, duration or notice period
+  - the posting wanting skills the candidate lacks
+  - a thin description from a source that truncates text
+
+Those belong in `gaps` or simply lower the score. Leave credibility_concern \
+null unless you would warn a friend not to waste an application on it.
+
+When a description is truncated or thin, say so plainly in `why` and score \
+conservatively rather than inventing detail."""
 
 
 def build_agent(profile: Profile, company_lookup) -> Agent:

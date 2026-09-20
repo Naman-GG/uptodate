@@ -38,4 +38,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  /* A frozen pulse would sit at an arbitrary opacity; hold it fully visible. */
+  .animate-pulse { opacity: 1 !important; }
 }

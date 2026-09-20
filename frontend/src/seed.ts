@@ -1,4 +1,4 @@
-import type { Funnel, Posting } from "./types";
+import type { Funnel, Posting, Profile } from "./types";
 
 /**
  * Seed data for reviewing the interface before the pipeline is deployed.
@@ -146,11 +146,32 @@ export const SEED_POSTINGS: Posting[] = [
  * 2026-09-18. The later stages are illustrative until the pipeline has run.
  */
 export const SEED_FUNNEL: Funnel = {
-  total_ingested: 14564,
-  screened: 3580,
-  extracted: 3580,
-  quarantined: 14,
-  gate_blocked: 3549,
-  gate_passed: 31,
-  scored: 31,
+  total_ingested: 14547,
+  prescreened_out: 10834,
+  screened: 3713,
+  read: 3700,
+  eligible: 169,
+  extracted: 0,
+  quarantined: 13,
+  gate_blocked: 3531,
+  gate_passed: 0,
+  scored: 169,
+};
+
+export const SEED_PROFILE: Profile = {
+  profile_id: "default",
+  label: "Fresher / new grad",
+  role_types: ["internship", "new_grad_fte"],
+  max_yoe: 1,
+  role_families: ["software_engineering", "ai_ml", "data", "devops_infra", "security"],
+  require_technical: true,
+  countries: ["IN"],
+  include_remote_global: true,
+  exclude_closed: true,
+  grad_year: null,
+  enforce_grad_year: false,
+  headline: "",
+  skills: [],
+  about: "",
+  preferred_cities: [],
 };

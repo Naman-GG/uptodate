@@ -70,25 +70,39 @@ def handler(event, context):
         if assessment.credibility_concern:
             flagged += 1
 
+        # to_ddb drops None values, so an attribute whose value is None must be
+        # left out of the expression too -- referencing :c while the values map
+        # omits it fails validation, and most postings have no concern to record.
+        sets = [
+            "fit_score = :f", "why = :w", "gaps = :g", "strengths = :st",
+            "pipeline_stage = :s", "scored_at = :t",
+            "board_column = if_not_exists(board_column, :col)",
+        ]
+        values = {
+            ":f": assessment.fit_score,
+            ":w": assessment.why,
+            ":g": assessment.gaps,
+            ":st": assessment.strengths,
+            ":s": "scored",
+            ":t": utcnow(),
+            ":col": "new",
+        }
+        removes = []
+        if assessment.credibility_concern:
+            sets.append("credibility_concern = :c")
+            values[":c"] = assessment.credibility_concern
+        else:
+            # Clear any concern from a previous scoring pass.
+            removes.append("credibility_concern")
+
+        expression = "SET " + ", ".join(sets)
+        if removes:
+            expression += " REMOVE " + ", ".join(removes)
+
         table.update_item(
             Key={"posting_id": posting_id},
-            UpdateExpression=(
-                "SET fit_score = :f, why = :w, gaps = :g, strengths = :st, "
-                "credibility_concern = :c, pipeline_stage = :s, scored_at = :t, "
-                "board_column = if_not_exists(board_column, :col)"
-            ),
-            ExpressionAttributeValues=to_ddb(
-                {
-                    ":f": assessment.fit_score,
-                    ":w": assessment.why,
-                    ":g": assessment.gaps,
-                    ":st": assessment.strengths,
-                    ":c": assessment.credibility_concern,
-                    ":s": "scored",
-                    ":t": utcnow(),
-                    ":col": "new",
-                }
-            ),
+            UpdateExpression=expression,
+            ExpressionAttributeValues=to_ddb(values),
         )
         scored += 1
 
